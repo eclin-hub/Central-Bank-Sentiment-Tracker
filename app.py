@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import streamlit as st
 
 st.set_page_config(
@@ -22,14 +23,12 @@ st.markdown(
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Nettoyage du header Streamlit par défaut */
     header[data-testid="stHeader"] {
         background: rgba(15, 23, 42, 0.8);
         backdrop-filter: blur(8px);
     }
     #MainMenu, footer {visibility: hidden;}
 
-    /* Conteneurs et cartes */
     .metric-card {
         background: #0f172a;
         border: 1px solid #1e293b;
@@ -56,7 +55,6 @@ st.markdown(
         margin-top: 4px;
     }
 
-    /* Diff Redline */
     .diff-ins {
         background-color: rgba(22, 163, 74, 0.2);
         color: #4ade80;
@@ -74,7 +72,6 @@ st.markdown(
         font-weight: 500;
     }
 
-    /* Badges */
     .badge-hawkish {
         background: rgba(220, 38, 38, 0.15);
         color: #ef4444;
@@ -135,7 +132,7 @@ def load_data():
 
 df = load_data()
 
-# Barre latérale (Paramètres & Filtres)
+# Barre latérale
 with st.sidebar:
     st.markdown("### 🏛️ **CBST Terminal**")
     st.caption("Quantitative FOMC Language Processing")
@@ -165,7 +162,7 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-# Filtrage
+# Filtrage temporel
 if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
     mask = (df["date"].dt.date >= date_range[0]) & (
         df["date"].dt.date <= date_range[1]
@@ -283,127 +280,12 @@ tab_analytics, tab_redline, tab_matrix = st.tabs(
     ]
 )
 
-    col_chart1, col_chart2 = st.columns([2, 1])
-
-    with col_chart1:
-        # Graphique Série Temporelle
-        fig = go.Figure()
-
-        # Aire colorée
-        fig.add_trace(
-            go.Scatter(
-                x=filtered_df["date"],
-                y=filtered_df["net_sentiment"],
-                mode="lines+markers",
-                name="Net Sentiment",
-                line=dict(color="#3b82f6", width=3),
-                marker=dict(size=8, color="#60a5fa", line=dict(width=2, color="#0f172a")),
-                fill="tozeroy",
-                fillcolor="rgba(59, 130, 246, 0.08)",
-                hovertemplate="<b>Date:</b> %{x|%d %b %Y}<br><b>Net Score:</b> %{y:+.4f}<extra></extra>",
-            )
-        )
-
-        fig.add_hline(
-            y=0,
-            line_dash="dash",
-            line_color="#475569",
-            annotation_text="Ligne de Neutralité (0.0)",
-            annotation_position="bottom right",
-            annotation_font=dict(color="#94a3b8", size=10),
-        )
-
-        fig.update_layout(
-            title=dict(
-                text="<b>Trajectoire du Net Sentiment FinBERT</b>",
-                font=dict(size=14, color="#f8fafc"),
-            ),
-            plot_bgcolor="#090d16",
-            paper_bgcolor="#090d16",
-            margin=dict(l=20, r=20, t=50, b=20),
-            xaxis=dict(
-                showgrid=True,
-                gridcolor="#1e293b",
-                color="#94a3b8",
-                tickformat="%b\n%Y",
-            ),
-            yaxis=dict(
-                showgrid=True,
-                gridcolor="#1e293b",
-                color="#94a3b8",
-                zeroline=False,
-            ),
-            font=dict(family="Inter, sans-serif"),
-            height=380,
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col_chart2:
-        # Barres de variations (deltas)
-        filtered_df["delta"] = filtered_df["net_sentiment"].diff().fillna(0)
-        colors = [
-            "#ef4444" if d > 0.05 else "#22c55e" if d < -0.05 else "#64748b"
-            for d in filtered_df["delta"]
-        ]
-
-        fig_bar = go.Figure()
-        fig_bar.add_trace(
-            go.Bar(
-                x=filtered_df["date"],
-                y=filtered_df["delta"],
-                marker_color=colors,
-                hovertemplate="<b>FOMC:</b> %{x|%b %Y}<br><b>Delta:</b> %{y:+.4f}<extra></extra>",
-            )
-        )
-
-        fig_bar.update_layout(
-            title=dict(
-                text="<b>Chocs d'Inflexion (Delta vs M-1)</b>",
-                font=dict(size=14, color="#f8fafc"),
-            ),
-            plot_bgcolor="#090d16",
-            paper_bgcolor="#090d16",
-            margin=dict(l=20, r=20, t=50, b=20),
-            xaxis=dict(showgrid=False, color="#94a3b8", tickformat="%b %y"),
-            yaxis=dict(showgrid=True, gridcolor="#1e293b", color="#94a3b8"),
-            font=dict(family="Inter, sans-serif"),
-            height=380,
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-    # Tableau historique complet
-    st.markdown("#### **Registre Historique des Réunions**")
-    st.dataframe(
-        filtered_df[["date", "net_sentiment", "delta"]]
-        .sort_values(by="date", ascending=False)
-        .assign(
-            date=lambda x: x["date"].dt.strftime("%Y-%m-%d"),
-            net_sentiment=lambda x: x["net_sentiment"].map("{:+.4f}".format),
-            delta=lambda x: x["delta"].map("{:+.4f}".format),
-        )
-        .rename(
-            columns={
-                "date": "Date Réunion",
-                "net_sentiment": "Score FinBERT",
-                "delta": "Variation Δ",
-            }
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
-
 with tab_analytics:
-    # -------------------------------------------------------------
-    # GRAPHIQUE INSTITUTIONNEL DUAL-PANEL (SENTIMENT + CHOCS DELTA)
-    # -------------------------------------------------------------
-    from plotly.subplots import make_subplots
-
     filtered_df["delta"] = filtered_df["net_sentiment"].diff().fillna(0)
     filtered_df["ema_sentiment"] = (
         filtered_df["net_sentiment"].ewm(span=3, adjust=False).mean()
     )
 
-    # Subplots synchronisés sur l'axe des X
     fig = make_subplots(
         rows=2,
         cols=1,
@@ -416,9 +298,7 @@ with tab_analytics:
         ),
     )
 
-    # --- 1. PANNEAU SUPÉRIEUR : SENTIMENT & RÉGIMES ---
-
-    # Zone Neutre (Incertitude sémantique)
+    # Zone neutre
     fig.add_hrect(
         y0=-0.05,
         y1=0.05,
@@ -431,7 +311,7 @@ with tab_analytics:
         annotation_font=dict(color="#64748b", size=9),
     )
 
-    # Ligne Moyenne Mobile (Tendance de fond)
+    # Tendance EMA
     fig.add_trace(
         go.Scatter(
             x=filtered_df["date"],
@@ -445,7 +325,7 @@ with tab_analytics:
         col=1,
     )
 
-    # Trajectoire principale du Net Sentiment
+    # Ligne principale Net Sentiment
     fig.add_trace(
         go.Scatter(
             x=filtered_df["date"],
@@ -466,7 +346,6 @@ with tab_analytics:
         col=1,
     )
 
-    # Ligne Zéro stricte
     fig.add_hline(
         y=0,
         line_width=1,
@@ -475,7 +354,7 @@ with tab_analytics:
         col=1,
     )
 
-    # --- 2. PANNEAU INFÉRIEUR : CHOCS DELTA ---
+    # Panneau inférieur : Deltas
     delta_colors = [
         "#f87171" if d > 0.08 else "#4ade80" if d < -0.08 else "#64748b"
         for d in filtered_df["delta"]
@@ -493,7 +372,6 @@ with tab_analytics:
         col=1,
     )
 
-    # Annotations sur les seuils d'alerte macro
     fig.add_hline(
         y=0.10,
         line_dash="dash",
@@ -511,7 +389,6 @@ with tab_analytics:
         col=1,
     )
 
-    # --- MISE EN PAGE GLOBALE STYLE TERMINAL ---
     fig.update_layout(
         plot_bgcolor="#090d16",
         paper_bgcolor="#090d16",
@@ -530,7 +407,6 @@ with tab_analytics:
         hovermode="x unified",
     )
 
-    # Axe temporel X (Boutons de sélection rapide institutionnels)
     fig.update_xaxes(
         showgrid=True,
         gridcolor="#1e293b",
@@ -565,7 +441,6 @@ with tab_analytics:
         col=1,
     )
 
-    # Axes Y
     fig.update_yaxes(
         title_text="Net Score",
         showgrid=True,
@@ -585,7 +460,6 @@ with tab_analytics:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # Tableau historique épuré
     st.markdown("#### **Registre Quantitatif des Décisions**")
     st.dataframe(
         filtered_df[["date", "net_sentiment", "delta"]]
@@ -605,6 +479,7 @@ with tab_analytics:
         use_container_width=True,
         hide_index=True,
     )
+
 with tab_redline:
     st.markdown("#### **Inspecteur Textuel Sémantique Différentiel**")
     st.caption(
@@ -628,7 +503,6 @@ with tab_redline:
             df["date"].dt.strftime("%Y-%m-%d") == d_old, "statement_text"
         ].values[0]
 
-        # Calcul du Redline HTML interactif
         words_old = str(text_old).split()
         words_new = str(text_new).split()
         matcher = difflib.SequenceMatcher(None, words_old, words_new)
