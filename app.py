@@ -132,7 +132,7 @@ def load_data():
 
 df = load_data()
 
-# Barre latérale
+# Barre laterale
 with st.sidebar:
     st.markdown("### 🏛️ **CBST Terminal**")
     st.caption("Quantitative FOMC Language Processing")
@@ -141,23 +141,23 @@ with st.sidebar:
     min_date = df["date"].min().date()
     max_date = df["date"].max().date()
     date_range = st.date_input(
-        "Période d'analyse",
+        "Periode d'analyse",
         value=(min_date, max_date),
         min_value=min_date,
         max_value=max_date,
     )
 
     st.markdown("---")
-    st.markdown("**Spécifications Modèle :**")
+    st.markdown("**Specifications Modele :**")
     st.caption(
-        "• Modèle : FinBERT Fine-Tuned (Central Banks)\n"
-        "• Fréquence : Réunions FOMC officielles\n"
-        "• Métrique : Net Score $S = P(pos) - P(neg)$"
+        "• Modele : FinBERT Fine-Tuned (Central Banks)\n"
+        "• Frequence : Reunions FOMC officielles\n"
+        "• Metrique : Net Score $S = P(pos) - P(neg)$"
     )
     st.markdown("---")
     st.markdown(
         "<div style='font-size: 11px; color: #64748b;'>"
-        "Pipeline automatisé via GitHub Actions & Fed Scraper.<br>Toutes données vérifiées sur federalreserve.gov"
+        "Pipeline automatise via GitHub Actions & Fed Scraper.<br>Toutes donnees verifiees sur federalreserve.gov"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -198,7 +198,7 @@ st.markdown(
             FOMC Sentiment & Policy Stance Tracker
         </h1>
         <div style="font-size: 14px; color: #94a3b8;">
-            Détection algorithmique d'inflexions sémantiques et modélisation de l'impact cross-asset par NLP.
+            Detection algorithmique d'inflexions semantiques et modelisation de l'impact cross-asset par NLP.
         </div>
     </div>
     """,
@@ -215,7 +215,7 @@ with kpi1:
             <div class="metric-label">Dernier Net Score</div>
             <div class="metric-value">{latest_row['net_sentiment']:+.4f}</div>
             <div class="metric-delta" style="color: {'#ef4444' if delta > 0 else '#22c55e'};">
-                {delta:+.4f} vs FOMC précédent
+                {delta:+.4f} vs FOMC precedent
             </div>
         </div>
         """,
@@ -242,12 +242,12 @@ with kpi3:
     st.markdown(
         f"""
         <div class="metric-card">
-            <div class="metric-label">Date du Communiqué</div>
+            <div class="metric-label">Date du Communique</div>
             <div class="metric-value" style="font-size: 20px; line-height: 32px;">
                 {latest_row['date'].strftime('%d %b %Y')}
             </div>
             <div class="metric-delta" style="color: #64748b;">
-                Précédent : {prev_row['date'].strftime('%d %b %Y')}
+                Precedent : {prev_row['date'].strftime('%d %b %Y')}
             </div>
         </div>
         """,
@@ -259,10 +259,10 @@ with kpi4:
     st.markdown(
         f"""
         <div class="metric-card">
-            <div class="metric-label">Volatilité Sémantique</div>
+            <div class="metric-label">Volatilite Semantique</div>
             <div class="metric-value">{vol:.3f}</div>
             <div class="metric-delta" style="color: #94a3b8;">
-                Écart-type sur la sélection ({len(filtered_df)} FOMC)
+                Ecart-type sur la selection ({len(filtered_df)} FOMC)
             </div>
         </div>
         """,
@@ -293,8 +293,8 @@ with tab_analytics:
         vertical_spacing=0.08,
         row_heights=[0.70, 0.30],
         subplot_titles=(
-            "<b>TRAJECTOIRE DU NET SENTIMENT FinBERT & RÉGIMES DE POLITIQUE MONÉTAIRE</b>",
-            "<b>CHOCS SÉMANTIQUES RÉUNION PAR RÉUNION (DELTA vs M-1)</b>",
+            "<b>TRAJECTOIRE DU NET SENTIMENT FinBERT & REGIMES DE POLITIQUE MONETAIRE</b>",
+            "<b>CHOCS SEMANTIQUES REUNION PAR REUNION (DELTA vs M-1)</b>",
         ),
     )
 
@@ -354,7 +354,7 @@ with tab_analytics:
         col=1,
     )
 
-    # Panneau inférieur : Deltas
+    # Panneau inferieur : Deltas
     delta_colors = [
         "#f87171" if d > 0.08 else "#4ade80" if d < -0.08 else "#64748b"
         for d in filtered_df["delta"]
@@ -407,41 +407,9 @@ with tab_analytics:
         hovermode="x unified",
     )
 
-    # Axe X inférieur avec sélecteur de portée
-    fig.update_xaxes(
-        showgrid=True,
-        gridcolor="#1e293b",
-        showspikes=True,
-        spikemode="across",
-        spikesnap="cursor",
-        spikethickness=1,
-        spikcolor="#475569",
-        row=2,
-        col=1,
-        rangeselector=dict(
-            buttons=list([
-                dict(count=1, label="1A", step="year", stepmode="backward"),
-                dict(count=3, label="3A", step="year", stepmode="backward"),
-                dict(step="all", label="TOUT"),
-            ]),
-            bgcolor="#0f172a",
-            activecolor="#2563eb",
-            font=dict(color="#cbd5e1", size=10),
-        ),
-    )
-
-    # Axe X supérieur synchronisé
-    fig.update_xaxes(
-        showgrid=True,
-        gridcolor="#1e293b",
-        showspikes=True,
-        spikemode="across",
-        spikesnap="cursor",
-        spikethickness=1,
-        spikcolor="#475569",
-        row=1,
-        col=1,
-    )
+    # Axes X nets sans selectors problématiques
+    fig.update_xaxes(showgrid=True, gridcolor="#1e293b", row=1, col=1)
+    fig.update_xaxes(showgrid=True, gridcolor="#1e293b", row=2, col=1)
 
     fig.update_yaxes(
         title_text="Net Score",
@@ -462,7 +430,7 @@ with tab_analytics:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("#### **Registre Quantitatif des Décisions**")
+    st.markdown("#### **Registre Quantitatif des Decisions**")
     st.dataframe(
         filtered_df[["date", "net_sentiment", "delta"]]
         .sort_values(by="date", ascending=False)
@@ -473,7 +441,7 @@ with tab_analytics:
         )
         .rename(
             columns={
-                "date": "Date Réunion",
+                "date": "Date Reunion",
                 "net_sentiment": "Score FinBERT",
                 "delta": "Variation Δ vs M-1",
             }
@@ -483,19 +451,19 @@ with tab_analytics:
     )
 
 with tab_redline:
-    st.markdown("#### **Inspecteur Textuel Sémantique Différentiel**")
+    st.markdown("#### **Inspecteur Textuel Semantique Differentiel**")
     st.caption(
-        "Sélectionnez deux dates pour faire apparaître mot à mot les modifications apportées par le FOMC."
+        "Selectionnez deux dates pour faire apparaitre mot a mot les modifications apportees par le FOMC."
     )
 
     available_dates = df["date"].dt.strftime("%Y-%m-%d").tolist()[::-1]
     if len(available_dates) >= 2:
         c1, c2 = st.columns(2)
         with c1:
-            d_new = st.selectbox("Communiqué Récent (T)", available_dates, index=0)
+            d_new = st.selectbox("Communique Recent (T)", available_dates, index=0)
         with c2:
             d_old = st.selectbox(
-                "Communiqué de Référence (T - 1)", available_dates, index=1
+                "Communique de Reference (T - 1)", available_dates, index=1
             )
 
         text_new = df.loc[
@@ -538,20 +506,20 @@ with tab_redline:
             unsafe_allow_html=True,
         )
     else:
-        st.info("Données textuelles insuffisantes pour exécuter le comparateur.")
+        st.info("Donnees textuelles insuffisantes pour executer le comparateur.")
 
 with tab_matrix:
-    st.markdown("#### **Matrice Cross-Asset & Sensibilité Macro**")
-    st.caption("Conséquences tactiques attendues selon l'inflexion détectée.")
+    st.markdown("#### **Matrice Cross-Asset & Sensibilite Macro**")
+    st.caption("Consequences tactiques attendues selon l'inflexion detectee.")
 
     st.markdown(
         """
         | Classe d'Actif | Biais Typique Hawkish | Biais Typique Dovish | Canal de Transmission Macro |
         | :--- | :--- | :--- | :--- |
-        | **Taux US (2Y / 10Y)** | Tension à la hausse (Bearish) | Détente / Pentification (Bullish) | Réévaluation de la trajectoire des *fed funds* et prime de terme. |
-        | **Bitcoin (BTC)** | Forte pression baissière | Fortement haussier | Proxy haute sensibilité à la liquidité globale M2 et au dollar. |
-        | **S&P 500 (Actions)** | Compression des multiples P/E | Expansion des multiples (Risk-On) | Actualisation des flux de trésorerie futurs et conditions financières. |
-        | **Gold (Or)** | Consolidation / Baisse | Rally haussier | Taux réels (TIPS yields) et corrélation inverse au Dollar Index (DXY). |
-        | **Pétrole (WTI)** | Pression vendeuse | Soutien du cycle | Anticipation de croissance mondiale vs destruction de demande par resserrement. |
+        | **Taux US (2Y / 10Y)** | Tension a la hausse (Bearish) | Detente / Pentification (Bullish) | Reevaluation de la trajectoire des *fed funds* et prime de terme. |
+        | **Bitcoin (BTC)** | Forte pression baissiere | Fortement haussier | Proxy haute sensibilite a la liquidite globale M2 et au dollar. |
+        | **S&P 500 (Actions)** | Compression des multiples P/E | Expansion des multiples (Risk-On) | Actualisation des flux de tresorerie futurs et conditions financieres. |
+        | **Gold (Or)** | Consolidation / Baisse | Rally haussier | Taux reels (TIPS yields) et correlation inverse au Dollar Index (DXY). |
+        | **Petrole (WTI)** | Pression vendeuse | Soutien du cycle | Anticipation de croissance mondiale vs destruction de demande par resserrement. |
         """
     )
