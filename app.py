@@ -283,7 +283,6 @@ tab_analytics, tab_redline, tab_matrix = st.tabs(
     ]
 )
 
-with tab_analytics:
     col_chart1, col_chart2 = st.columns([2, 1])
 
     with col_chart1:
@@ -393,6 +392,219 @@ with tab_analytics:
         hide_index=True,
     )
 
+with tab_analytics:
+    # -------------------------------------------------------------
+    # GRAPHIQUE INSTITUTIONNEL DUAL-PANEL (SENTIMENT + CHOCS DELTA)
+    # -------------------------------------------------------------
+    from plotly.subplots import make_subplots
+
+    filtered_df["delta"] = filtered_df["net_sentiment"].diff().fillna(0)
+    filtered_df["ema_sentiment"] = (
+        filtered_df["net_sentiment"].ewm(span=3, adjust=False).mean()
+    )
+
+    # Subplots synchronisés sur l'axe des X
+    fig = make_subplots(
+        rows=2,
+        cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.08,
+        row_heights=[0.70, 0.30],
+        subplot_titles=(
+            "<b>TRAJECTOIRE DU NET SENTIMENT FinBERT & RÉGIMES DE POLITIQUE MONÉTAIRE</b>",
+            "<b>CHOCS SÉMANTIQUES RÉUNION PAR RÉUNION (DELTA vs M-1)</b>",
+        ),
+    )
+
+    # --- 1. PANNEAU SUPÉRIEUR : SENTIMENT & RÉGIMES ---
+
+    # Zone Neutre (Incertitude sémantique)
+    fig.add_hrect(
+        y0=-0.05,
+        y1=0.05,
+        fillcolor="rgba(148, 163, 184, 0.08)",
+        line_width=0,
+        row=1,
+        col=1,
+        annotation_text="Zone Neutre / Data-Dependent",
+        annotation_position="bottom right",
+        annotation_font=dict(color="#64748b", size=9),
+    )
+
+    # Ligne Moyenne Mobile (Tendance de fond)
+    fig.add_trace(
+        go.Scatter(
+            x=filtered_df["date"],
+            y=filtered_df["ema_sentiment"],
+            mode="lines",
+            name="Tendance EMA (3M)",
+            line=dict(color="#94a3b8", width=1.5, dash="dot"),
+            hoverinfo="skip",
+        ),
+        row=1,
+        col=1,
+    )
+
+    # Trajectoire principale du Net Sentiment
+    fig.add_trace(
+        go.Scatter(
+            x=filtered_df["date"],
+            y=filtered_df["net_sentiment"],
+            mode="lines+markers",
+            name="Net Sentiment (FOMC)",
+            line=dict(color="#38bdf8", width=3),
+            marker=dict(
+                size=7,
+                color="#0284c7",
+                line=dict(width=1.5, color="#f8fafc"),
+            ),
+            fill="tozeroy",
+            fillcolor="rgba(56, 189, 248, 0.07)",
+            hovertemplate="<b>Date :</b> %{x|%d %b %Y}<br><b>Net Score :</b> %{y:+.4f}<extra></extra>",
+        ),
+        row=1,
+        col=1,
+    )
+
+    # Ligne Zéro stricte
+    fig.add_hline(
+        y=0,
+        line_width=1,
+        line_color="#475569",
+        row=1,
+        col=1,
+    )
+
+    # --- 2. PANNEAU INFÉRIEUR : CHOCS DELTA ---
+    delta_colors = [
+        "#f87171" if d > 0.08 else "#4ade80" if d < -0.08 else "#64748b"
+        for d in filtered_df["delta"]
+    ]
+
+    fig.add_trace(
+        go.Bar(
+            x=filtered_df["date"],
+            y=filtered_df["delta"],
+            marker_color=delta_colors,
+            name="Variation Δ",
+            hovertemplate="<b>FOMC :</b> %{x|%b %Y}<br><b>Variation :</b> %{y:+.4f}<extra></extra>",
+        ),
+        row=2,
+        col=1,
+    )
+
+    # Annotations sur les seuils d'alerte macro
+    fig.add_hline(
+        y=0.10,
+        line_dash="dash",
+        line_color="rgba(239, 68, 68, 0.4)",
+        line_width=1,
+        row=2,
+        col=1,
+    )
+    fig.add_hline(
+        y=-0.10,
+        line_dash="dash",
+        line_color="rgba(34, 197, 94, 0.4)",
+        line_width=1,
+        row=2,
+        col=1,
+    )
+
+    # --- MISE EN PAGE GLOBALE STYLE TERMINAL ---
+    fig.update_layout(
+        plot_bgcolor="#090d16",
+        paper_bgcolor="#090d16",
+        font=dict(family="Inter, sans-serif", color="#94a3b8"),
+        margin=dict(l=40, r=30, t=60, b=30),
+        height=540,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(size=11, color="#cbd5e1"),
+        ),
+        hovermode="x unified",
+    )
+
+    # Axe temporel X (Boutons de sélection rapide institutionnels)
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#1e293b",
+        showspikes=True,
+        spikemode="across",
+        spikesnap="cursor",
+        spikethickness=1,
+        spikcolor="#475569",
+        spikeplaced="bottom",
+        row=2,
+        col=1,
+        rangeselector=dict(
+            buttons=list([
+                dict(count=1, label="1A", step="year", stepmode="backward"),
+                dict(count=3, label="3A", step="year", stepmode="backward"),
+                dict(step="all", label="TOUT"),
+            ]),
+            bgcolor="#0f172a",
+            activecolor="#2563eb",
+            font=dict(color="#cbd5e1", size=10),
+        ),
+    )
+
+    fig.update_xaxes(
+        showgrid=True,
+        gridcolor="#1e293b",
+        showspikes=True,
+        spikemode="across",
+        spikethickness=1,
+        spikcolor="#475569",
+        row=1,
+        col=1,
+    )
+
+    # Axes Y
+    fig.update_yaxes(
+        title_text="Net Score",
+        showgrid=True,
+        gridcolor="#1e293b",
+        zeroline=False,
+        row=1,
+        col=1,
+    )
+    fig.update_yaxes(
+        title_text="Variation Δ",
+        showgrid=True,
+        gridcolor="#1e293b",
+        zeroline=False,
+        row=2,
+        col=1,
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    # Tableau historique épuré
+    st.markdown("#### **Registre Quantitatif des Décisions**")
+    st.dataframe(
+        filtered_df[["date", "net_sentiment", "delta"]]
+        .sort_values(by="date", ascending=False)
+        .assign(
+            date=lambda x: x["date"].dt.strftime("%Y-%m-%d"),
+            net_sentiment=lambda x: x["net_sentiment"].map("{:+.4f}".format),
+            delta=lambda x: x["delta"].map("{:+.4f}".format),
+        )
+        .rename(
+            columns={
+                "date": "Date Réunion",
+                "net_sentiment": "Score FinBERT",
+                "delta": "Variation Δ vs M-1",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
 with tab_redline:
     st.markdown("#### **Inspecteur Textuel Sémantique Différentiel**")
     st.caption(
