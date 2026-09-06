@@ -3,7 +3,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import streamlit as st
 
 st.set_page_config(
@@ -13,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Style CSS Dark Institutional
+# Style Dark Minimaliste & Typographie
 st.markdown(
     """
     <style>
@@ -132,7 +131,7 @@ def load_data():
 
 df = load_data()
 
-# Barre laterale
+# Sidebar
 with st.sidebar:
     st.markdown("### 🏛️ **CBST Terminal**")
     st.caption("Quantitative FOMC Language Processing")
@@ -141,28 +140,28 @@ with st.sidebar:
     min_date = df["date"].min().date()
     max_date = df["date"].max().date()
     date_range = st.date_input(
-        "Periode d'analyse",
+        "Période d'analyse",
         value=(min_date, max_date),
         min_value=min_date,
         max_value=max_date,
     )
 
     st.markdown("---")
-    st.markdown("**Specifications Modele :**")
+    st.markdown("**Spécifications :**")
     st.caption(
-        "• Modele : FinBERT Fine-Tuned (Central Banks)\n"
-        "• Frequence : Reunions FOMC officielles\n"
-        "• Metrique : Net Score $S = P(pos) - P(neg)$"
+        "• Modèle : FinBERT (Central Banking Fine-Tuned)\n"
+        "• Métrique : Net Score $S = P(Positif) - P(Négatif)$\n"
+        "• Échelle : $[-1.0, +1.0]$"
     )
     st.markdown("---")
     st.markdown(
         "<div style='font-size: 11px; color: #64748b;'>"
-        "Pipeline automatise via GitHub Actions & Fed Scraper.<br>Toutes donnees verifiees sur federalreserve.gov"
+        "Pipeline automatisé via GitHub Actions & Scraper officiel de la Fed."
         "</div>",
         unsafe_allow_html=True,
     )
 
-# Filtrage temporel
+# Filtre temporel
 if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
     mask = (df["date"].dt.date >= date_range[0]) & (
         df["date"].dt.date <= date_range[1]
@@ -171,10 +170,10 @@ if isinstance(date_range, (list, tuple)) and len(date_range) == 2:
 else:
     filtered_df = df.copy()
 
+filtered_df["delta"] = filtered_df["net_sentiment"].diff().fillna(0)
+
 latest_row = filtered_df.iloc[-1]
-prev_row = (
-    filtered_df.iloc[-2] if len(filtered_df) > 1 else latest_row
-)
+prev_row = filtered_df.iloc[-2] if len(filtered_df) > 1 else latest_row
 delta = latest_row["net_sentiment"] - prev_row["net_sentiment"]
 
 if delta > 0.10:
@@ -198,7 +197,7 @@ st.markdown(
             FOMC Sentiment & Policy Stance Tracker
         </h1>
         <div style="font-size: 14px; color: #94a3b8;">
-            Detection algorithmique d'inflexions semantiques et modelisation de l'impact cross-asset par NLP.
+            Détection algorithmique d'inflexions sémantiques et modélisation de l'impact cross-asset par NLP.
         </div>
     </div>
     """,
@@ -215,7 +214,7 @@ with kpi1:
             <div class="metric-label">Dernier Net Score</div>
             <div class="metric-value">{latest_row['net_sentiment']:+.4f}</div>
             <div class="metric-delta" style="color: {'#ef4444' if delta > 0 else '#22c55e'};">
-                {delta:+.4f} vs FOMC precedent
+                {delta:+.4f} vs FOMC précédent
             </div>
         </div>
         """,
@@ -242,12 +241,12 @@ with kpi3:
     st.markdown(
         f"""
         <div class="metric-card">
-            <div class="metric-label">Date du Communique</div>
+            <div class="metric-label">Date du Communiqué</div>
             <div class="metric-value" style="font-size: 20px; line-height: 32px;">
                 {latest_row['date'].strftime('%d %b %Y')}
             </div>
             <div class="metric-delta" style="color: #64748b;">
-                Precedent : {prev_row['date'].strftime('%d %b %Y')}
+                Précédent : {prev_row['date'].strftime('%d %b %Y')}
             </div>
         </div>
         """,
@@ -259,10 +258,10 @@ with kpi4:
     st.markdown(
         f"""
         <div class="metric-card">
-            <div class="metric-label">Volatilite Semantique</div>
+            <div class="metric-label">Volatilité Sémantique</div>
             <div class="metric-value">{vol:.3f}</div>
             <div class="metric-delta" style="color: #94a3b8;">
-                Ecart-type sur la selection ({len(filtered_df)} FOMC)
+                Écart-type ({len(filtered_df)} FOMC analysés)
             </div>
         </div>
         """,
@@ -274,196 +273,169 @@ st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
 # Onglets d'analyse
 tab_analytics, tab_redline, tab_matrix = st.tabs(
     [
-        "📈 Dynamique & Historique Quantitative",
+        "📈 Trajectoire & Régimes Macro",
         "🔍 Inspecteur Redline Diff (Side-by-Side)",
         "⚡ Grille de Transmission Cross-Asset",
     ]
 )
 
 with tab_analytics:
-    filtered_df["delta"] = filtered_df["net_sentiment"].diff().fillna(0)
-    filtered_df["ema_sentiment"] = (
-        filtered_df["net_sentiment"].ewm(span=3, adjust=False).mean()
-    )
+    # Calcul dynamique de l'amplitude Y pour éviter tout effet d'écrasement
+    y_min = filtered_df["net_sentiment"].min()
+    y_max = filtered_df["net_sentiment"].max()
+    margin_y = max((y_max - y_min) * 0.25, 0.15)
+    y_range = [y_min - margin_y, y_max + margin_y]
 
-    fig = make_subplots(
-        rows=2,
-        cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.08,
-        row_heights=[0.70, 0.30],
-        subplot_titles=(
-            "<b>TRAJECTOIRE DU NET SENTIMENT FinBERT & REGIMES DE POLITIQUE MONETAIRE</b>",
-            "<b>CHOCS SEMANTIQUES REUNION PAR REUNION (DELTA vs M-1)</b>",
-        ),
-    )
+    fig = go.Figure()
 
-    # Zone neutre
+    # Zone Hawkish en arrière-plan (au-dessus de 0)
     fig.add_hrect(
-        y0=-0.05,
-        y1=0.05,
-        fillcolor="rgba(148, 163, 184, 0.08)",
+        y0=0,
+        y1=y_range[1],
+        fillcolor="rgba(239, 68, 68, 0.05)",
         line_width=0,
-        row=1,
-        col=1,
-        annotation_text="Zone Neutre / Data-Dependent",
-        annotation_position="bottom right",
-        annotation_font=dict(color="#64748b", size=9),
+        annotation_text="RÉGIME HAWKISH (Restrictif)",
+        annotation_position="top left",
+        annotation_font=dict(color="rgba(239, 68, 68, 0.5)", size=11, family="Inter"),
     )
 
-    # Tendance EMA
-    fig.add_trace(
-        go.Scatter(
-            x=filtered_df["date"],
-            y=filtered_df["ema_sentiment"],
-            mode="lines",
-            name="Tendance EMA (3M)",
-            line=dict(color="#94a3b8", width=1.5, dash="dot"),
-            hoverinfo="skip",
-        ),
-        row=1,
-        col=1,
+    # Zone Dovish en arrière-plan (en-dessous de 0)
+    fig.add_hrect(
+        y0=y_range[0],
+        y1=0,
+        fillcolor="rgba(34, 197, 94, 0.05)",
+        line_width=0,
+        annotation_text="RÉGIME DOVISH (Accommodant)",
+        annotation_position="bottom left",
+        annotation_font=dict(color="rgba(34, 197, 94, 0.5)", size=11, family="Inter"),
     )
 
-    # Ligne principale Net Sentiment
+    # Ligne de neutralité centrale bien visible
+    fig.add_hline(
+        y=0,
+        line_color="#475569",
+        line_width=1.5,
+        line_dash="dot",
+    )
+
+    # Courbe principale de Net Sentiment
     fig.add_trace(
         go.Scatter(
             x=filtered_df["date"],
             y=filtered_df["net_sentiment"],
             mode="lines+markers",
-            name="Net Sentiment (FOMC)",
-            line=dict(color="#38bdf8", width=3),
+            name="Net Sentiment FinBERT",
+            line=dict(color="#38bdf8", width=3.5, shape="spline", smoothing=0.3),
             marker=dict(
-                size=7,
+                size=9,
                 color="#0284c7",
-                line=dict(width=1.5, color="#f8fafc"),
+                line=dict(color="#f8fafc", width=2),
             ),
-            fill="tozeroy",
-            fillcolor="rgba(56, 189, 248, 0.07)",
             hovertemplate="<b>Date :</b> %{x|%d %b %Y}<br><b>Net Score :</b> %{y:+.4f}<extra></extra>",
-        ),
-        row=1,
-        col=1,
-    )
-
-    fig.add_hline(
-        y=0,
-        line_width=1,
-        line_color="#475569",
-        row=1,
-        col=1,
-    )
-
-    # Panneau inferieur : Deltas
-    delta_colors = [
-        "#f87171" if d > 0.08 else "#4ade80" if d < -0.08 else "#64748b"
-        for d in filtered_df["delta"]
-    ]
-
-    fig.add_trace(
-        go.Bar(
-            x=filtered_df["date"],
-            y=filtered_df["delta"],
-            marker_color=delta_colors,
-            name="Variation Δ",
-            hovertemplate="<b>FOMC :</b> %{x|%b %Y}<br><b>Variation :</b> %{y:+.4f}<extra></extra>",
-        ),
-        row=2,
-        col=1,
-    )
-
-    fig.add_hline(
-        y=0.10,
-        line_dash="dash",
-        line_color="rgba(239, 68, 68, 0.4)",
-        line_width=1,
-        row=2,
-        col=1,
-    )
-    fig.add_hline(
-        y=-0.10,
-        line_dash="dash",
-        line_color="rgba(34, 197, 94, 0.4)",
-        line_width=1,
-        row=2,
-        col=1,
+        )
     )
 
     fig.update_layout(
+        title=dict(
+            text="<b>HISTORIQUE DU NET SENTIMENT FinBERT (ÉCHELLE DÉPLOYÉE)</b>",
+            font=dict(size=14, color="#f8fafc"),
+            x=0.01,
+            y=0.96,
+        ),
         plot_bgcolor="#090d16",
         paper_bgcolor="#090d16",
         font=dict(family="Inter, sans-serif", color="#94a3b8"),
-        margin=dict(l=40, r=30, t=60, b=30),
-        height=540,
-        showlegend=True,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1,
-            font=dict(size=11, color="#cbd5e1"),
+        margin=dict(l=30, r=30, t=50, b=30),
+        height=480,
+        yaxis=dict(
+            range=y_range,
+            showgrid=True,
+            gridcolor="#1e293b",
+            gridwidth=1,
+            zeroline=False,
+            tickformat="+.2f",
+            title=dict(text="Score Net", font=dict(size=12, color="#64748b")),
+        ),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="#1e293b",
+            gridwidth=1,
+            tickformat="%b %Y",
+            title=None,
         ),
         hovermode="x unified",
-    )
-
-    # Axes X nets sans selectors problématiques
-    fig.update_xaxes(showgrid=True, gridcolor="#1e293b", row=1, col=1)
-    fig.update_xaxes(showgrid=True, gridcolor="#1e293b", row=2, col=1)
-
-    fig.update_yaxes(
-        title_text="Net Score",
-        showgrid=True,
-        gridcolor="#1e293b",
-        zeroline=False,
-        row=1,
-        col=1,
-    )
-    fig.update_yaxes(
-        title_text="Variation Δ",
-        showgrid=True,
-        gridcolor="#1e293b",
-        zeroline=False,
-        row=2,
-        col=1,
+        showlegend=False,
     )
 
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("#### **Registre Quantitatif des Decisions**")
-    st.dataframe(
-        filtered_df[["date", "net_sentiment", "delta"]]
-        .sort_values(by="date", ascending=False)
-        .assign(
-            date=lambda x: x["date"].dt.strftime("%Y-%m-%d"),
-            net_sentiment=lambda x: x["net_sentiment"].map("{:+.4f}".format),
-            delta=lambda x: x["delta"].map("{:+.4f}".format),
+    # Deuxième section aérée : Chocs et Historique côte à côte
+    col_bars, col_table = st.columns([1, 1])
+
+    with col_bars:
+        st.markdown("#### **Chocs Sémantiques (Delta vs M-1)**")
+        delta_colors = [
+            "#ef4444" if d > 0.05 else "#22c55e" if d < -0.05 else "#64748b"
+            for d in filtered_df["delta"]
+        ]
+
+        fig_bar = go.Figure()
+        fig_bar.add_trace(
+            go.Bar(
+                x=filtered_df["date"],
+                y=filtered_df["delta"],
+                marker_color=delta_colors,
+                hovertemplate="<b>FOMC :</b> %{x|%b %Y}<br><b>Delta :</b> %{y:+.4f}<extra></extra>",
+            )
         )
-        .rename(
-            columns={
-                "date": "Date Reunion",
-                "net_sentiment": "Score FinBERT",
-                "delta": "Variation Δ vs M-1",
-            }
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
+        fig_bar.add_hline(y=0, line_color="#334155", line_width=1)
+        fig_bar.update_layout(
+            plot_bgcolor="#090d16",
+            paper_bgcolor="#090d16",
+            font=dict(family="Inter, sans-serif", color="#94a3b8"),
+            margin=dict(l=20, r=20, t=20, b=20),
+            height=280,
+            xaxis=dict(showgrid=False, tickformat="%b %y"),
+            yaxis=dict(showgrid=True, gridcolor="#1e293b", tickformat="+.2f"),
+        )
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    with col_table:
+        st.markdown("#### **Détail Numérique des Réunions**")
+        st.dataframe(
+            filtered_df[["date", "net_sentiment", "delta"]]
+            .sort_values(by="date", ascending=False)
+            .assign(
+                date=lambda x: x["date"].dt.strftime("%Y-%m-%d"),
+                net_sentiment=lambda x: x["net_sentiment"].map("{:+.4f}".format),
+                delta=lambda x: x["delta"].map("{:+.4f}".format),
+            )
+            .rename(
+                columns={
+                    "date": "Date",
+                    "net_sentiment": "Net Score",
+                    "delta": "Variation Δ",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+            height=280,
+        )
 
 with tab_redline:
-    st.markdown("#### **Inspecteur Textuel Semantique Differentiel**")
+    st.markdown("#### **Inspecteur Textuel Sémantique Différentiel**")
     st.caption(
-        "Selectionnez deux dates pour faire apparaitre mot a mot les modifications apportees par le FOMC."
+        "Sélectionnez deux dates pour faire apparaître mot à mot les modifications apportées par le FOMC."
     )
 
     available_dates = df["date"].dt.strftime("%Y-%m-%d").tolist()[::-1]
     if len(available_dates) >= 2:
         c1, c2 = st.columns(2)
         with c1:
-            d_new = st.selectbox("Communique Recent (T)", available_dates, index=0)
+            d_new = st.selectbox("Communiqué Récent (T)", available_dates, index=0)
         with c2:
             d_old = st.selectbox(
-                "Communique de Reference (T - 1)", available_dates, index=1
+                "Communiqué de Référence (T - 1)", available_dates, index=1
             )
 
         text_new = df.loc[
@@ -506,20 +478,20 @@ with tab_redline:
             unsafe_allow_html=True,
         )
     else:
-        st.info("Donnees textuelles insuffisantes pour executer le comparateur.")
+        st.info("Données textuelles insuffisantes pour exécuter le comparateur.")
 
 with tab_matrix:
-    st.markdown("#### **Matrice Cross-Asset & Sensibilite Macro**")
-    st.caption("Consequences tactiques attendues selon l'inflexion detectee.")
+    st.markdown("#### **Matrice Cross-Asset & Sensibilité Macro**")
+    st.caption("Conséquences tactiques attendues selon l'inflexion détectée.")
 
     st.markdown(
         """
         | Classe d'Actif | Biais Typique Hawkish | Biais Typique Dovish | Canal de Transmission Macro |
         | :--- | :--- | :--- | :--- |
-        | **Taux US (2Y / 10Y)** | Tension a la hausse (Bearish) | Detente / Pentification (Bullish) | Reevaluation de la trajectoire des *fed funds* et prime de terme. |
-        | **Bitcoin (BTC)** | Forte pression baissiere | Fortement haussier | Proxy haute sensibilite a la liquidite globale M2 et au dollar. |
-        | **S&P 500 (Actions)** | Compression des multiples P/E | Expansion des multiples (Risk-On) | Actualisation des flux de tresorerie futurs et conditions financieres. |
-        | **Gold (Or)** | Consolidation / Baisse | Rally haussier | Taux reels (TIPS yields) et correlation inverse au Dollar Index (DXY). |
-        | **Petrole (WTI)** | Pression vendeuse | Soutien du cycle | Anticipation de croissance mondiale vs destruction de demande par resserrement. |
+        | **Taux US (2Y / 10Y)** | Tension à la hausse (Bearish) | Détente / Pentification (Bullish) | Réévaluation de la trajectoire des *fed funds* et prime de terme. |
+        | **Bitcoin (BTC)** | Forte pression baissière | Fortement haussier | Proxy haute sensibilité à la liquidité globale M2 et au dollar. |
+        | **S&P 500 (Actions)** | Compression des multiples P/E | Expansion des multiples (Risk-On) | Actualisation des flux de trésorerie futurs et conditions financières. |
+        | **Gold (Or)** | Consolidation / Baisse | Rally haussier | Taux réels (TIPS yields) et corrélation inverse au Dollar Index (DXY). |
+        | **Pétrole (WTI)** | Pression vendeuse | Soutien du cycle | Anticipation de croissance mondiale vs destruction de demande par resserrement. |
         """
     )
