@@ -2,6 +2,7 @@ import difflib
 from pathlib import Path
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -108,9 +109,9 @@ st.markdown(
 def load_data():
     file_path = Path("data/processed/fomc_sentiment_scored.csv")
     if not file_path.exists():
-        dates = pd.date_range(end=pd.Timestamp.now(), periods=12, freq="7W")
+        dates = pd.date_range(end=pd.Timestamp.now(), periods=15, freq="7W")
         np.random.seed(42)
-        scores = np.cumsum(np.random.randn(12) * 0.15)
+        scores = np.cumsum(np.random.randn(15) * 0.15)
         df = pd.DataFrame(
             {
                 "date": dates,
@@ -129,7 +130,18 @@ def load_data():
     return df
 
 
+@st.cache_data(ttl=300)
+def load_market_reactions():
+    reaction_path = Path("data/processed/fomc_market_reactions.csv")
+    if reaction_path.exists():
+        df_react = pd.read_csv(reaction_path)
+        df_react["date"] = pd.to_datetime(df_react["date"])
+        return df_react
+    return None
+
+
 df = load_data()
+df_react = load_market_reactions()
 
 # Sidebar
 with st.sidebar:
@@ -150,8 +162,8 @@ with st.sidebar:
     st.markdown("**Spécifications :**")
     st.caption(
         "• Modèle : FinBERT (Central Banking Fine-Tuned)\n"
-        "• Métrique : Net Score $S = P(Positif) - P(Négatif)$\n"
-        "• Échelle : $[-1.0, +1.0]$"
+        "• Métrique : Net Score $S = P(Pos) - P(Nég)$\n"
+        "• Transmission : Multi-Asset Event Study (J+1 / J+5)"
     )
     st.markdown("---")
     st.markdown(
@@ -271,16 +283,17 @@ with kpi4:
 st.markdown("<div style='margin-top: 25px;'></div>", unsafe_allow_html=True)
 
 # Onglets d'analyse
-tab_analytics, tab_redline, tab_matrix = st.tabs(
+tab_analytics, tab_event_study, tab_redline, tab_matrix = st.tabs(
     [
         "📈 Trajectoire & Régimes Macro",
+        "📊 Event Study & Backtest Cross-Asset",
         "🔍 Inspecteur Redline Diff (Side-by-Side)",
-        "⚡ Grille de Transmission Cross-Asset",
+        "⚡ Grille de Transmission Macro",
     ]
 )
 
+# --- ONGLET 1 : SÉRIE TEMPORELLE PRINCIPALE ---
 with tab_analytics:
-    # Calcul dynamique de l'amplitude Y pour éviter tout effet d'écrasement
     y_min = filtered_df["net_sentiment"].min()
     y_max = filtered_df["net_sentiment"].max()
     margin_y = max((y_max - y_min) * 0.25, 0.15)
@@ -288,7 +301,6 @@ with tab_analytics:
 
     fig = go.Figure()
 
-    # Zone Hawkish en arrière-plan (au-dessus de 0)
     fig.add_hrect(
         y0=0,
         y1=y_range[1],
@@ -299,7 +311,6 @@ with tab_analytics:
         annotation_font=dict(color="rgba(239, 68, 68, 0.5)", size=11, family="Inter"),
     )
 
-    # Zone Dovish en arrière-plan (en-dessous de 0)
     fig.add_hrect(
         y0=y_range[0],
         y1=0,
@@ -310,15 +321,8 @@ with tab_analytics:
         annotation_font=dict(color="rgba(34, 197, 94, 0.5)", size=11, family="Inter"),
     )
 
-    # Ligne de neutralité centrale bien visible
-    fig.add_hline(
-        y=0,
-        line_color="#475569",
-        line_width=1.5,
-        line_dash="dot",
-    )
+    fig.add_hline(y=0, line_color="#475569", line_width=1.5, line_dash="dot")
 
-    # Courbe principale de Net Sentiment
     fig.add_trace(
         go.Scatter(
             x=filtered_df["date"],
@@ -326,18 +330,14 @@ with tab_analytics:
             mode="lines+markers",
             name="Net Sentiment FinBERT",
             line=dict(color="#38bdf8", width=3.5, shape="spline", smoothing=0.3),
-            marker=dict(
-                size=9,
-                color="#0284c7",
-                line=dict(color="#f8fafc", width=2),
-            ),
+            marker=dict(size=9, color="#0284c7", line=dict(color="#f8fafc", width=2)),
             hovertemplate="<b>Date :</b> %{x|%d %b %Y}<br><b>Net Score :</b> %{y:+.4f}<extra></extra>",
         )
     )
 
     fig.update_layout(
         title=dict(
-            text="<b>HISTORIQUE DU NET SENTIMENT FinBERT (ÉCHELLE DÉPLOYÉE)</b>",
+            text="<b>HISTORIQUE DU NET SENTIMENT FinBERT</b>",
             font=dict(size=14, color="#f8fafc"),
             x=0.01,
             y=0.96,
@@ -351,7 +351,6 @@ with tab_analytics:
             range=y_range,
             showgrid=True,
             gridcolor="#1e293b",
-            gridwidth=1,
             zeroline=False,
             tickformat="+.2f",
             title=dict(text="Score Net", font=dict(size=12, color="#64748b")),
@@ -359,9 +358,7 @@ with tab_analytics:
         xaxis=dict(
             showgrid=True,
             gridcolor="#1e293b",
-            gridwidth=1,
             tickformat="%b %Y",
-            title=None,
         ),
         hovermode="x unified",
         showlegend=False,
@@ -369,7 +366,6 @@ with tab_analytics:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # Deuxième section aérée : Chocs et Historique côte à côte
     col_bars, col_table = st.columns([1, 1])
 
     with col_bars:
@@ -422,6 +418,99 @@ with tab_analytics:
             height=280,
         )
 
+# --- ONGLET 2 : EVENT STUDY & CORRÉLATIONS DE MARCHÉ ---
+with tab_event_study:
+    st.markdown("#### **Analyse Quantitative d'Impact d'Événement (Event Study)**")
+    st.caption(
+        "Corrélation empirique entre le choc d'inflexion sémantique (Δ FinBERT) et la réaction des marchés financiers."
+    )
+
+    if df_react is not None and not df_react.empty:
+        assets_map = {
+            "Dollar Index (DXY)": "DXY_ret_1d",
+            "Bitcoin (BTC)": "BTC_ret_1d",
+            "Or Spot (Gold)": "GOLD_ret_1d",
+            "Taux US 10Y (en bps)": "US_10Y_ret_1d",
+            "S&P 500 (SPX)": "SPX_ret_1d",
+        }
+
+        col_select, col_stat = st.columns([1, 2])
+        with col_select:
+            selected_asset_label = st.selectbox("Actif à analyser :", list(assets_map.keys()))
+            col_target = assets_map[selected_asset_label]
+
+        # Calcul stats rapides
+        clean_subset = df_react[["delta_sentiment", col_target]].dropna()
+        corr_val = clean_subset["delta_sentiment"].corr(clean_subset[col_target])
+
+        with col_stat:
+            st.markdown(
+                f"""
+                <div style="background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 12px 16px; margin-top: 5px;">
+                    <span style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Corrélation de Pearson (J+1)</span>
+                    <div style="font-size: 20px; font-weight: 800; color: {'#38bdf8' if abs(corr_val) > 0.2 else '#94a3b8'};">
+                        {corr_val:+.3f}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        # Nuage de points + droite de tendance OLS
+        fig_scatter = px.scatter(
+            clean_subset,
+            x="delta_sentiment",
+            y=col_target,
+            trendline="ols",
+            labels={
+                "delta_sentiment": "Choc Sémantique FOMC (Δ FinBERT)",
+                col_target: f"Réaction J+1 {selected_asset_label} (%)",
+            },
+        )
+
+        fig_scatter.update_traces(
+            marker=dict(size=9, color="#38bdf8", line=dict(width=1.5, color="#f8fafc")),
+            line=dict(color="#f43f5e", width=2),
+        )
+
+        fig_scatter.update_layout(
+            plot_bgcolor="#090d16",
+            paper_bgcolor="#090d16",
+            font=dict(family="Inter, sans-serif", color="#94a3b8"),
+            height=400,
+            margin=dict(l=30, r=30, t=30, b=30),
+            xaxis=dict(showgrid=True, gridcolor="#1e293b", zeroline=True, zerolinecolor="#475569"),
+            yaxis=dict(showgrid=True, gridcolor="#1e293b", zeroline=True, zerolinecolor="#475569"),
+        )
+        st.plotly_chart(fig_scatter, use_container_width=True)
+
+        st.markdown("#### **Matrice Historique Complète des Réactions**")
+        disp_cols = ["date", "delta_sentiment", "DXY_ret_1d", "BTC_ret_1d", "GOLD_ret_1d", "US_10Y_ret_1d", "SPX_ret_1d"]
+        st.dataframe(
+            df_react[disp_cols]
+            .sort_values(by="date", ascending=False)
+            .assign(
+                date=lambda x: x["date"].dt.strftime("%Y-%m-%d"),
+                delta_sentiment=lambda x: x["delta_sentiment"].map("{:+.4f}".format),
+            )
+            .rename(
+                columns={
+                    "date": "Date FOMC",
+                    "delta_sentiment": "Δ FinBERT",
+                    "DXY_ret_1d": "DXY (J+1)",
+                    "BTC_ret_1d": "BTC (J+1)",
+                    "GOLD_ret_1d": "Or (J+1)",
+                    "US_10Y_ret_1d": "10Y bps (J+1)",
+                    "SPX_ret_1d": "SPX (J+1)",
+                }
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
+    else:
+        st.info("Données d'Event Study non trouvées. Exécutez `python src/analysis/market_reaction.py`.")
+
+# --- ONGLET 3 : REDLINE DIFF ---
 with tab_redline:
     st.markdown("#### **Inspecteur Textuel Sémantique Différentiel**")
     st.caption(
@@ -434,16 +523,10 @@ with tab_redline:
         with c1:
             d_new = st.selectbox("Communiqué Récent (T)", available_dates, index=0)
         with c2:
-            d_old = st.selectbox(
-                "Communiqué de Référence (T - 1)", available_dates, index=1
-            )
+            d_old = st.selectbox("Communiqué de Référence (T - 1)", available_dates, index=1)
 
-        text_new = df.loc[
-            df["date"].dt.strftime("%Y-%m-%d") == d_new, "statement_text"
-        ].values[0]
-        text_old = df.loc[
-            df["date"].dt.strftime("%Y-%m-%d") == d_old, "statement_text"
-        ].values[0]
+        text_new = df.loc[df["date"].dt.strftime("%Y-%m-%d") == d_new, "statement_text"].values[0]
+        text_old = df.loc[df["date"].dt.strftime("%Y-%m-%d") == d_old, "statement_text"].values[0]
 
         words_old = str(text_old).split()
         words_new = str(text_new).split()
@@ -459,13 +542,9 @@ with tab_redline:
                     f'<span class="diff-ins">{" ".join(words_new[j1:j2])}</span>'
                 )
             elif tag == "delete":
-                diff_html.append(
-                    f'<span class="diff-del">{" ".join(words_old[i1:i2])}</span>'
-                )
+                diff_html.append(f'<span class="diff-del">{" ".join(words_old[i1:i2])}</span>')
             elif tag == "insert":
-                diff_html.append(
-                    f'<span class="diff-ins">{" ".join(words_new[j1:j2])}</span>'
-                )
+                diff_html.append(f'<span class="diff-ins">{" ".join(words_new[j1:j2])}</span>')
 
         full_diff_text = " ".join(diff_html)
 
@@ -477,12 +556,11 @@ with tab_redline:
             """,
             unsafe_allow_html=True,
         )
-    else:
-        st.info("Données textuelles insuffisantes pour exécuter le comparateur.")
 
+# --- ONGLET 4 : MATRICE QUALITATIVE ---
 with tab_matrix:
-    st.markdown("#### **Matrice Cross-Asset & Sensibilité Macro**")
-    st.caption("Conséquences tactiques attendues selon l'inflexion détectée.")
+    st.markdown("#### **Matrice Cross-Asset & Canaux de Transmission**")
+    st.caption("Conséquences théoriques et structurelles selon l'inflexion monétaire.")
 
     st.markdown(
         """
