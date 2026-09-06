@@ -407,6 +407,7 @@ with tab_analytics:
         hovermode="x unified",
     )
 
+    # Axe X inférieur avec sélecteur de portée
     fig.update_xaxes(
         showgrid=True,
         gridcolor="#1e293b",
@@ -415,7 +416,6 @@ with tab_analytics:
         spikesnap="cursor",
         spikethickness=1,
         spikcolor="#475569",
-        spikeplaced="bottom",
         row=2,
         col=1,
         rangeselector=dict(
@@ -430,11 +430,13 @@ with tab_analytics:
         ),
     )
 
+    # Axe X supérieur synchronisé
     fig.update_xaxes(
         showgrid=True,
         gridcolor="#1e293b",
         showspikes=True,
         spikemode="across",
+        spikesnap="cursor",
         spikethickness=1,
         spikcolor="#475569",
         row=1,
