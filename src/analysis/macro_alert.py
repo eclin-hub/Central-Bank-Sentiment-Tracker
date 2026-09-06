@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import resend
 
-DASHBOARD_URL = "https://central-bank-sentiment-tracker.streamlit.app"
+DASHBOARD_URL = "https://cbst07.streamlit.app"
 
 
 def generate_macro_impact(delta_score, current_score):
