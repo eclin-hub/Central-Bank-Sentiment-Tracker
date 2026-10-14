@@ -2,9 +2,11 @@ name: FOMC Statement Sniper
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+  schedule:
+    # 17h59 UTC les mercredis des réunions FOMC 2026 (13h59 heure de Washington)
+    - cron: '59 17 16 9 *'   # 16 Septembre 2026
+    - cron: '59 17 28 10 *'  # 28 Octobre 2026
+    - cron: '59 17 9 12 *'   # 9 Décembre 2026
 
 jobs:
   snipe-statement:
