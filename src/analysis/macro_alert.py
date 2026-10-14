@@ -359,7 +359,12 @@ def run_alert(force=False):
     """
 
     recipient = os.getenv("RECIPIENT_EMAIL")
+    if not recipient:
+        print("Erreur : La variable d'environnement RECIPIENT_EMAIL n'est pas définie.")
+        return
+
     send_resend_alert(subject, html_template, recipient_email=recipient)
+
 
 if __name__ == "__main__":
     run_alert()
