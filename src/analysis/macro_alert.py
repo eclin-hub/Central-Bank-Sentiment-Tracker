@@ -1,10 +1,54 @@
+from datetime import datetime
 import difflib
 import os
 from pathlib import Path
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 import resend
 
 DASHBOARD_URL = "https://cbst07.streamlit.app"
+BASE_URL = "https://www.federalreserve.gov"
+CALENDAR_URL = f"{BASE_URL}/monetarypolicy/fomccalendars.htm"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+}
+
+
+def auto_scrape_latest_fomc():
+    """Vérifie et extrait le tout dernier communiqué officiel de la Fed en direct."""
+    try:
+        res = requests.get(CALENDAR_URL, headers=HEADERS, timeout=10)
+        if res.status_code != 200:
+            return None
+
+        soup = BeautifulSoup(res.content, "html.parser")
+        pattern = re.compile(r"monetary(\d{8})a\.htm", re.IGNORECASE)
+
+        for a in soup.find_all("a", href=True):
+            match = pattern.search(a["href"])
+            if match:
+                date_str = match.group(1)
+                url = urljoin(BASE_URL, a["href"])
+                res_stmt = requests.get(url, headers=HEADERS, timeout=10)
+                if res_stmt.status_code == 200:
+                    stmt_soup = BeautifulSoup(res_stmt.content, "html.parser")
+                    article = (
+                        stmt_soup.find("div", id="article")
+                        or stmt_soup.find("div", class_="col-xs-12")
+                        or stmt_soup.find("main")
+                    )
+                    text = (
+                        "\n\n".join([p.get_text(strip=True) for p in article.find_all("p")])
+                        if article
+                        else ""
+                    )
+                    formatted_date = datetime.strptime(date_str, "%Y%m%d").strftime("%Y-%m-%d")
+                    return {"date": formatted_date, "statement_text": text}
+    except Exception as e:
+        print(f"Erreur lors du scraping automatique de secours : {e}")
+    return None
 
 
 def generate_macro_impact(delta_score, current_score):
@@ -314,7 +358,8 @@ def run_alert(force=False):
     </html>
     """
 
-    recipient = "lin.bahic@gmail.com"
+    # Récupération sécurisée de l'e-mail via variable d'environnement (anti-spam / anti-bot GitHub)
+    recipient = os.getenv("RECIPIENT_EMAIL", "lin.bahic@gmail.com")
     send_resend_alert(subject, html_template, recipient_email=recipient)
 
 
