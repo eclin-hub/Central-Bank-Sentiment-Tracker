@@ -358,10 +358,8 @@ def run_alert(force=False):
     </html>
     """
 
-    # Récupération sécurisée de l'e-mail via variable d'environnement (anti-spam / anti-bot GitHub)
-    recipient = os.getenv("RECIPIENT_EMAIL", "lin.bahic@gmail.com")
+    recipient = os.getenv("RECIPIENT_EMAIL")
     send_resend_alert(subject, html_template, recipient_email=recipient)
-
 
 if __name__ == "__main__":
     run_alert()
