@@ -105,7 +105,7 @@ st.markdown(
 )
 
 
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=60)
 def load_data():
     file_path = Path("data/processed/fomc_sentiment_scored.csv")
     if not file_path.exists():
