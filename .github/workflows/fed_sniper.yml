@@ -15,7 +15,7 @@ on:
     - cron: '59 17 28 7 *'   # 28 Juillet 2027
     - cron: '59 17 15 9 *'   # 15 Septembre 2027
     - cron: '59 17 27 10 *'  # 27 Octobre 2027
-    - cron: '59 17 8 12 *'   # 8 Décembre 2027
+    - cron: '59 17 8 12 *'   # 8 Decembre 2027
 
 jobs:
   snipe-statement:
