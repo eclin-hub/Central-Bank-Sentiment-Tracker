@@ -1,4 +1,8 @@
-﻿requests
-numpy
+streamlit
+plotly
 pandas
-matplotlib
+requests
+beautifulsoup4
+resend
+transformers
+torch
