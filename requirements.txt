@@ -6,3 +6,5 @@ beautifulsoup4
 resend
 transformers
 torch
+statsmodels
+scikit-learn
