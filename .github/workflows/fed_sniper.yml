@@ -24,10 +24,11 @@ jobs:
         run: |
           pip install pandas requests beautifulsoup4 resend transformers torch
 
-      - name: Run Scraper & Alert Pipeline
+      - name: Run Full Pipeline (Scraping -> FinBERT Scoring -> Macro Alert)
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: |
           python src/scrapers/fomc_scraper.py
+          python src/models/sentiment_analyzer.py
           python src/analysis/macro_alert.py
