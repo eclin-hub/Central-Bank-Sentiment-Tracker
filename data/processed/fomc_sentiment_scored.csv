@@ -1,4 +1,15 @@
 date,url,statement_text,net_sentiment,label,pos_prob,neg_prob,neu_prob
+2026-09-16,https://www.federalreserve.gov/newsevents/pressreleases/monetary20260916a.htm,"September 16, 2026
+
+For release at 2:00 p.m. EDTShare
+
+The Federal Open Market Committee approved the following statement for release by a 12 – 0 vote:
+
+The Committee decided to raise the target range for the federal funds rate by 1/4 percentage pointto 3-3/4to 4 percent, in support of the Federal Reserve's dual mandate. The Committee is continuing its policy of maintaining ample reserves in the banking system.
+
+Economic activity is expanding at a solid pace. While uncertainty remains elevated owing, in part, to geopolitical developments,domestic spending has been resilient. Productivity growth is strong, and capital investment is robust. Job gains have kept pace with the workforce, and the unemployment rate has changed little.
+
+Inflation remains elevated. Today's policy action will support a timelier return to the Committee's 2 percent goal. The Committee will deliver price stability.",0.6002,Hawkish,0.6622,0.062,0.2758
 2026-07-29,https://www.federalreserve.gov/newsevents/pressreleases/monetary20260729a.htm,"July 29, 2026
 
 For release at 2:00 p.m. EDTShare
@@ -177,16 +188,3 @@ In support of its goals, the Committee decided to maintain the target range for 
 In assessing the appropriate stance of monetary policy, the Committee will continue to monitor the implications of incoming information for the economic outlook. The Committee would be prepared to adjust the stance of monetary policy as appropriate if risks emerge that could impede the attainment of the Committee's goals. The Committee's assessments will take into account a wide range of information, including readings on labor market conditions, inflation pressures and inflation expectations, and financial and international developments.
 
 Voting for the monetary policy action were Jerome H. Powell, Chair; John C. Williams, Vice Chair; Michael S. Barr; Michelle W. Bowman; Susan M. Collins; Lisa D. Cook; Austan D. Goolsbee; Philip N. Jefferson; Adriana D. Kugler; Alberto G. Musalem; Jeffrey R. Schmid; and Christopher J. Waller.",0.0839,Hawkish,0.1771,0.0932,0.7297
-2024-12-18,https://www.federalreserve.gov/newsevents/pressreleases/monetary20241218a.htm,"December 18, 2024
-
-For release at 2:00 p.m. ESTShare
-
-Recent indicators suggest that economic activity has continued to expand at a solid pace. Since earlier in the year, labor market conditions have generally eased, and the unemployment rate has moved up but remains low. Inflation has made progress toward the Committee's 2 percent objective but remains somewhat elevated.
-
-The Committee seeks to achieve maximum employment and inflation at the rate of 2 percent over the longer run. The Committee judges that the risks to achieving its employment and inflation goals are roughly in balance. The economic outlook is uncertain, and the Committee is attentive to the risks to both sides of its dual mandate.
-
-In support of its goals, the Committee decided to lower the target range for the federal funds rate by 1/4 percentage point to 4-1/4 to 4-1/2 percent. In considering the extent and timing of additional adjustments to the target range for the federal funds rate, the Committee will carefully assess incoming data, the evolving outlook, and the balance of risks. The Committee will continue reducing its holdings of Treasury securities and agency debt and agency mortgage‑backed securities. The Committee is strongly committed to supporting maximum employment and returning inflation to its 2 percent objective.
-
-In assessing the appropriate stance of monetary policy, the Committee will continue to monitor the implications of incoming information for the economic outlook. The Committee would be prepared to adjust the stance of monetary policy as appropriate if risks emerge that could impede the attainment of the Committee's goals. The Committee's assessments will take into account a wide range of information, including readings on labor market conditions, inflation pressures and inflation expectations, and financial and international developments.
-
-Voting for the monetary policy action were Jerome H. Powell, Chair; John C. Williams, Vice Chair; Thomas I. Barkin; Michael S. Barr; Raphael W. Bostic; Michelle W. Bowman; Lisa D. Cook; Mary C. Daly; Philip N. Jefferson; Adriana D. Kugler; and Christopher J. Waller. Voting against the action was Beth M. Hammack, who preferred to maintain the target range for the federal funds rate at 4-1/2 to 4-3/4 percent.",0.079,Hawkish,0.1816,0.1026,0.7158
